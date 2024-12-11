@@ -1,0 +1,59 @@
+version: "3"
+services:
+  cms-app:
+    container_name: cms-app
+    build: .
+    image: strapi:latest
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./config:/opt/app/config
+      - ./src:/opt/app/src
+      - ./package.json:/opt/package.json
+      - ./pnpm-lock.yaml:/opt/pnpm-lock.yaml
+      - ./.env:/opt/app/.env
+      - ./public/uploads:/opt/app/public/uploads
+    ports:
+      - "${PORT}:${PORT}"
+    networks:
+      - cms-network
+    depends_on:
+      - cms-db
+
+  cms-db:
+    container_name: cms-db
+    platform: linux/amd64 #for platform error on Apple M1 chips
+    restart: unless-stopped
+    env_file: .env
+    image: postgres:12.0-alpine
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - cms-data:/var/lib/postgresql/data/ #using a volume
+      #- ./data:/var/lib/postgresql/data/ # if you want to use a bind folder
+    ports:
+      - "53337:5432"
+    networks:
+      - cms-network
+
+  cms-adminer:
+    container_name: cms-adminer
+    image: adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DESIGN: dracula
+      ADMINER_PLUGINS: tables-filter tinymce
+    ports:
+      - "58080:8080"
+    networks:
+      - cms-network
+
+volumes:
+  cms-data:
+
+networks:
+  cms-network:
+    name: cms-network
+    driver: bridge
